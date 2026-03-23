@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # --- App Settings ---
     LOG_LEVEL: str = "INFO"
 
+     # --- Database ---
+    DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'data' / 'airshield.db'}"
+
+
     # --- Paths ---
     DATA_DIR: Path = BASE_DIR / "data"
     RAW_DATA_DIR: Path = BASE_DIR / "data" / "raw"
