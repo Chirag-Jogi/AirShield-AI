@@ -1,0 +1,39 @@
+# --- Secrets ---
+.env
+
+# --- Python junk ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# --- Virtual Environment ---
+venv/
+
+# --- Data (managed by DVC later) ---
+data/raw/
+data/processed/
+data/models/
+*.db
+
+# --- MLflow ---
+mlruns/
+
+# --- Logs ---
+logs/
+*.log
+
+# --- IDE ---
+.vscode/
+.idea/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Testing ---
+.pytest_cache/
