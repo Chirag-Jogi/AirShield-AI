@@ -36,22 +36,34 @@ Furthermore, the platform integrates an **autonomous LLM Agent** (powered by NVI
 
 ```mermaid
 graph TD;
-    A[OpenWeatherMap API] -->|Live Data (JSON)| B(Data Scraper & Cleaner);
-    B -->|Cleaned DataFrame| C[(Supabase PostgreSQL Database)];
-    C -->|Historical & Live Data| D[XGBoost ML Predictor];
+
+    A[OpenWeatherMap API] -->|"Raw JSON"| B[ETL Pipeline];
+    B --> C[Data Cleaning & Validation];
+    C --> D[Feature Engineering];
+    D -->|"Processed Data"| E[(Supabase PostgreSQL)];
+
+    E -->|"Historical Data"| F[XGBoost Training];
+    F --> G[Model Artifact];
+
+    G --> H[Prediction API];
+    E -->|"Latest Data"| H;
+
+    H -->|"7-Day PM2.5 Forecast"| I[Context Builder];
+
+    I --> J[Prompt Formatter];
+    J --> K{Model Router};
+
+    K -->|"Primary"| L[OpenRouter API];
+    K -->|"Fallback"| M[Backup Model API];
+
+    L --> N[LLM Response];
+    M --> N;
+
+    E -->|"Live Metrics API"| O[Streamlit Dashboard];
+    N -->|"Health Insights"| O;
+    H -->|"Predictions"| O;
+
     
-    D -->|7-Day PM2.5 Forecast| E[LLM Context Generator];
-    E -->|Structured Prompt| F[OpenRouter API];
-    F -->|Nemotron / Llama-3| G{Agent Failover Router};
-    G -->|AI Health Advice| H[Streamlit Web Dashboard];
-    
-    C -->|Live Metrics| H;
-    
-    subgraph "Docker Container Network"
-    H
-    B
-    end
-```
 
 ### Tech Stack
 | Tier | Technologies Used |
