@@ -34,6 +34,7 @@ Furthermore, the platform integrates an **autonomous LLM Agent** (powered by NVI
 
 ## 🏗️ System Architecture
 
+mermaid
 graph TD;
     A[OpenWeatherMap API] -->|"Live Data (JSON)"| B(Data Scraper & Cleaner);
     B -->|"Cleaned DataFrame"| C[(Supabase PostgreSQL Database)];
@@ -50,6 +51,7 @@ graph TD;
     H
     B
     end
+
 
 
 ### Tech Stack
