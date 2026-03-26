@@ -10,7 +10,10 @@ from src.utils.logger import logger
 
 def start_scheduler():
     """Start the automated data collection scheduler."""
-    
+    # Initialize database once at startup (pipeline no longer does this per-run)
+    from src.database.connection import init_db
+    init_db()
+
     scheduler = BlockingScheduler()
     
     # Run pipeline every 60 minutes

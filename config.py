@@ -24,9 +24,13 @@ class Settings(BaseSettings):
     OPENWEATHER_API_KEY: str = ""
     AQICN_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
-
+    OPENROUTER_API_KEY: str = ""  # <-- ADD THIS LINE
     # --- App Settings ---
     LOG_LEVEL: str = "INFO"
+
+    # --- API Retry Settings ---
+    API_MAX_RETRIES: int = 3
+    API_RETRY_DELAY: float = 2.0  # base delay in seconds (exponential backoff)
 
      # --- Database ---
     DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'data' / 'airshield.db'}"

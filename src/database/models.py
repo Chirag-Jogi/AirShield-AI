@@ -25,7 +25,7 @@ class AirQualityReading(Base):
     longitude = Column(Float, nullable=False)
 
     # --- Air Quality Index ---
-    aqi = Column(Integer, nullable=False)  # 1=Good, 2=Fair, 3=Moderate, 4=Poor, 5=Very Poor
+    aqi = Column(Integer, nullable=True)  # 1=Good, 2=Fair, 3=Moderate, 4=Poor, 5=Very Poor
 
     # --- Pollutants (μg/m³) ---
     co = Column(Float)     # Carbon Monoxide

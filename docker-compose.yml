@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------
+  # 1. DATABASE CONTAINER (PostgreSQL Backend)
+  # ----------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: airshield_db
+    environment:
+      POSTGRES_USER: airshield_user
+      POSTGRES_PASSWORD: airshield_password
+      POSTGRES_DB: airshield
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airshield_user -d airshield"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------
+  # 2. WEB CONTAINER (Frontend Dashboard)
+  # ----------------------------------------
+  web:
+    build: .
+    container_name: airshield_web
+    command: streamlit run dashboard/app.py --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      # This overrides the local SQLite string securely to use our PostgreSQL container
+      - DATABASE_URL=postgresql://airshield_user:airshield_password@db:5432/airshield
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data   # We still mount data/ so XGBoost ML models can be loaded!
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      worker:
+        condition: service_started
+
+  # ----------------------------------------
+  # 3. WORKER CONTAINER (Background Scraper)
+  # ----------------------------------------
+  worker:
+    build: .
+    container_name: airshield_worker
+    command: python -c "from scheduler.jobs import start_scheduler; start_scheduler()"
+    environment:
+      - DATABASE_URL=postgresql://airshield_user:airshield_password@db:5432/airshield
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data   # Mount data/ to hold the ML models and raw downloads if any
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
