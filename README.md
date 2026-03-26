@@ -62,8 +62,7 @@ graph TD;
     E -->|"Live Metrics API"| O[Streamlit Dashboard];
     N -->|"Health Insights"| O;
     H -->|"Predictions"| O;
-
-    
+ ```   
 
 ### Tech Stack
 | Tier | Technologies Used |
