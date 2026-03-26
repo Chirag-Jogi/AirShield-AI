@@ -2,8 +2,8 @@ name: Hourly Air Quality Scraper
 
 on:
   schedule:
-    # Run every hour at the start of the hour
-    - cron: '0 * * * *'
+    # Run every 30 minutes
+    - cron: '*/30 * * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
