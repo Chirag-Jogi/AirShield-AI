@@ -34,7 +34,7 @@ Furthermore, the platform integrates an **autonomous LLM Agent** (powered by NVI
 
 ## 🏗️ System Architecture
 
-mermaid
+```mermaid
 graph TD;
 
     A[OpenWeatherMap API] -->|"Raw JSON"| B[ETL Pipeline];
