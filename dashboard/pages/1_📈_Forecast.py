@@ -6,6 +6,7 @@ Shows predicted PM2.5 for each hour of the day.
 import streamlit as st
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from src.utils.time_utils import get_ist_now
 
 import sys
 from pathlib import Path
@@ -37,7 +38,7 @@ def generate_24h_forecast(city: str, live_data: dict) -> list:
     Uses current live pollutant values as base inputs.
     Only changes hour/month for each prediction.
     """
-    now = datetime.now()
+    now = get_ist_now()
     forecasts = []
 
     for h_offset in range(0, 24):

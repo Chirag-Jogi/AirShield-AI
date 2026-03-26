@@ -11,6 +11,7 @@ import joblib
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+from src.utils.time_utils import get_ist_now
 
 from config import settings
 from src.data.cities import INDIAN_CITIES
@@ -60,7 +61,7 @@ def predict_pm25(
         dict with predicted PM2.5 value and input details.
     """
     # Auto-detect time if not provided
-    now = datetime.now()
+    now = get_ist_now()
     if hour is None:
         hour = now.hour
     if month is None:

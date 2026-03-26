@@ -6,12 +6,14 @@ import requests
 import json
 from datetime import datetime, timedelta
 import time
+from src.utils.time_utils import get_ist_now
 
 from config import settings
 from src.data.cities import INDIAN_CITIES
 from src.data.scrapers import openweather_scraper
 from src.ml.predictor import predict_pm25
 from src.utils.logger import logger
+from src.utils.time_utils import get_ist_now
 
 
 # VERIFIED ULTRA-FAST FREE MODELS (No 120B/405B models that take 2 minutes to reply)
@@ -74,7 +76,7 @@ class AirShieldAgent:
 
         # 2. 7-DAY FORECAST TRANSLATION
         predictions = []
-        now = datetime.now()
+        now = get_ist_now()
         
         for days_ahead in range(1, 8):
             future_date = now + timedelta(days=days_ahead)
@@ -117,7 +119,7 @@ class AirShieldAgent:
             f"You receive highly accurate context about a city's current real-time air quality and the next 7 days of Machine Learning predictions.\n"
             f"Your goal is to provide deep, analytical, and practical health and scheduling advice based strictly on this data.\n\n"
             f"CRITICAL INSTRUCTIONS:\n"
-            f"0. THE ABSOLUTE CURRENT DATE TODAY IS {datetime.now().strftime('%A, %B %d, %Y')}. If the user asks what today's date is, you must output this exact date. Do not make up a date.\n"
+            f"0. THE ABSOLUTE CURRENT DATE TODAY IS {get_ist_now().strftime('%A, %B %d, %Y')}. If the user asks what today's date is, you must output this exact date. Do not make up a date.\n"
             f"1. ALWAYS calculate and state the EXACT percentage change (e.g., 'PM2.5 is expected to increase by 45% tomorrow compared to today').\n"
             "2. ALWAYS mention the precise numerical values (e.g., '81.88 μg/m³').\n"
             "3. Frame your advice in terms of risk probability (e.g., 'There is a high probability of severe respiratory risk on Tuesday').\n"
