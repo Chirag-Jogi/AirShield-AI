@@ -97,7 +97,14 @@ def predict_pm25(
     # Load model and predict
     model = load_model()
     if model is None:
-        return {"error": "Model not found"}
+        # Fallback to a zero or default prediction instead of crashing
+        return {
+            "city": city,
+            "predicted_pm25": 0.0, 
+            "error": "Model not found",
+            "hour": hour,
+            "month": month
+        }
 
     predicted_pm25 = float(model.predict(features)[0])
 
