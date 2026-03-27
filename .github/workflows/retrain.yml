@@ -1,0 +1,49 @@
+name: Weekly Model Retraining
+
+on:
+  schedule:
+    # Run every Sunday at midnight (UTC)
+    - cron: '0 0 * * 0'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Get full history to allow pushing back
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Continuous Training
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python src/ml/train_continuous.py
+
+      - name: Check for model changes
+        id: check_changes
+        run: |
+          if git diff --quiet data/models/xgboost_pm25.joblib; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and Push New Model
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --global user.name "GitHub Action (Model Bot)"
+          git config --global user.email "action@github.com"
+          git add data/models/xgboost_pm25.joblib
+          git commit -m "🤖 Robot: New improved model deployed (Sunday Retrain)"
+          git push
