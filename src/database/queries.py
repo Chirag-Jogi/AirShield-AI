@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlalchemy import desc
 from src.database.connection import get_session
 from src.database.models import AirQualityReading
+from src.database.models import User
 from src.utils.logger import logger
 
 
@@ -88,5 +89,83 @@ def get_city_readings(city: str, limit: int = 100) -> list:
             .limit(limit)
             .all()
         )
+    finally:
+        session.close()
+
+
+def get_city_status(city: str):
+    """Get the absolute latest reading for a city."""
+    session = get_session()
+    try:
+        return (
+            session.query(AirQualityReading)
+            .filter(AirQualityReading.city == city)
+            .order_by(desc(AirQualityReading.measured_at))
+            .first()
+        )
+    finally:
+        session.close()
+
+
+
+
+def get_or_create_user(telegram_id: int, first_name: str) -> User:
+    """Check if user exists; if not, create them."""
+    session = get_session()
+    try:
+        user = session.query(User).filter(User.telegram_id == telegram_id).first()
+        if not user:
+            user = User(telegram_id=telegram_id, first_name=first_name)
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        return user
+    finally:
+        session.close()
+
+
+def get_active_users() -> list[User]:
+    """Get all users who have alerts enabled."""
+    session = get_session()
+    try:
+        return session.query(User).filter(User.is_alert_enabled == True).all()
+    finally:
+        session.close()
+
+def update_user_city(telegram_id: int, city_name: str):
+    """Update a user's home city."""
+    session = get_session()
+    try:
+        session.query(User).filter(User.telegram_id == telegram_id).update({"home_city": city_name})
+        session.commit()
+    finally:
+        session.close()
+
+def update_user_health(telegram_id: int, profile: str):
+    """Update a user's health profile."""
+    session = get_session()
+    try:
+        session.query(User).filter(User.telegram_id == telegram_id).update({"health_profile": profile})
+        session.commit()
+    finally:
+        session.close()
+
+
+def update_user_last_morning(telegram_id: int):
+    """Mark that the user was sent their morning briefing today."""
+    session = get_session()
+    try:
+        session.query(User).filter(User.telegram_id == telegram_id).update({"last_morning_at": datetime.utcnow()})
+        session.commit()
+    finally:
+        session.close()
+
+
+def update_user_last_alert(telegram_id: int):
+    """Mark that the user was sent an emergency alert just now."""
+    session = get_session()
+    try:
+        session.query(User).filter(User.telegram_id == telegram_id).update({"last_alert_at": datetime.utcnow()})
+        session.commit()
     finally:
         session.close()

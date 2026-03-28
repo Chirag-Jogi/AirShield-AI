@@ -1,17 +1,18 @@
 """
-ETL Pipeline — Extract, Transform, Load
-Production-grade orchestrator with fault isolation and metrics.
+ETL Pipeline (Async) — Extract, Transform, Load
+High-Performance orchestrator with concurrent extraction and fault isolation.
+Follows the "AirShield Upgrade Prompt" standards: Concurrent and Resilient.
 """
 
 import time
+import asyncio
 from dataclasses import dataclass, field
-
 from config import settings
 from src.data.scrapers import openweather_scraper, aqicn_scraper
 from src.data.cleaner import clean_all_readings
 from src.database.queries import save_readings
 from src.utils.logger import logger
-
+from src.utils.http_client import SentinelClient
 
 @dataclass
 class PipelineResult:
@@ -28,91 +29,91 @@ class PipelineResult:
     def success(self) -> bool:
         return self.saved_readings > 0 and self.sources_succeeded > 0
 
-
-def _extract_source(name: str, fetch_fn, api_key: str) -> list[dict]:
+async def _extract_source_async(name: str, fetch_fn, api_key: str) -> list[dict]:
     """
-    Extract data from a single source with fault isolation.
-    If one source fails, the other still runs.
+    Extract data from a single source asynchronously with fault isolation.
     """
     try:
         logger.info(f"📡 Extracting from {name}...")
-        data = fetch_fn(api_key)
+        data = await fetch_fn(api_key)
         logger.info(f"  → {name}: {len(data)} readings extracted")
         return data
     except Exception as e:
         logger.error(f"  ❌ {name} extraction failed completely: {e}")
         return []
 
-
-def run_pipeline() -> PipelineResult:
+async def run_pipeline_async() -> PipelineResult:
     """
-    Run the full ETL pipeline:
-    1. EXTRACT — Scrape data from all APIs (fault-isolated per source)
-    2. TRANSFORM — Clean and normalize
-    3. LOAD — Save to database (per-record fault tolerance)
-
-    Returns PipelineResult with full metrics.
+    Run the full ETL pipeline asynchronously:
+    1. EXTRACT — Scrape data from all APIs concurrently.
+    2. TRANSFORM — Clean and normalize.
+    3. LOAD — Save to database.
     """
     result = PipelineResult()
     start_time = time.time()
 
     logger.info("=" * 50)
-    logger.info("🚀 Starting AirShield AI Data Pipeline")
+    logger.info("🚀 Starting AirShield AI Data Pipeline (Async)")
     logger.info("=" * 50)
 
-    all_readings: list[dict] = []
-
-    # --- EXTRACT (each source isolated) ---
-    sources = []
+    # Prepare extraction tasks
+    extraction_tasks = []
     if settings.OPENWEATHER_API_KEY:
-        sources.append(("OpenWeatherMap", openweather_scraper.fetch_all_cities, settings.OPENWEATHER_API_KEY))
-    else:
-        logger.warning("⚠️ Skipping OpenWeatherMap (no API key)")
-
+        extraction_tasks.append(_extract_source_async(
+            "OpenWeatherMap", openweather_scraper.fetch_all_cities_async, settings.OPENWEATHER_API_KEY
+        ))
     if settings.AQICN_API_KEY:
-        sources.append(("AQICN", aqicn_scraper.fetch_all_cities, settings.AQICN_API_KEY))
-    else:
-        logger.warning("⚠️ Skipping AQICN (no API key)")
+        extraction_tasks.append(_extract_source_async(
+            "AQICN", aqicn_scraper.fetch_all_cities_async, settings.AQICN_API_KEY
+        ))
 
-    result.sources_attempted = len(sources)
+    result.sources_attempted = len(extraction_tasks)
 
-    for name, fetch_fn, api_key in sources:
-        data = _extract_source(name, fetch_fn, api_key)
+    # 1. EXTRACT (Concurrent)
+    if not extraction_tasks:
+        logger.warning("⚠️ No extraction sources configured!")
+        return result
+
+    raw_results = await asyncio.gather(*extraction_tasks)
+    
+    all_readings = []
+    for data in raw_results:
         if data:
             result.sources_succeeded += 1
             all_readings.extend(data)
-        else:
-            result.errors.append(f"{name}: zero readings extracted")
-
+    
     result.raw_readings = len(all_readings)
 
     if not all_readings:
         logger.error("❌ No data collected from any source!")
-        result.duration_seconds = time.time() - start_time
+        await SentinelClient.close_client()
         return result
 
-    # --- TRANSFORM ---
+    # 2. TRANSFORM
     cleaned = clean_all_readings(all_readings)
     result.cleaned_readings = len(cleaned)
 
-    # --- LOAD ---
+    # 3. LOAD
     result.saved_readings = save_readings(cleaned)
 
-    result.duration_seconds = time.time() - start_time
+    # Clean up HTTP connections
+    await SentinelClient.close_client()
 
+    result.duration_seconds = time.time() - start_time
     logger.info("=" * 50)
     logger.info(
         f"✅ Pipeline complete | "
         f"Sources: {result.sources_succeeded}/{result.sources_attempted} | "
-        f"Raw: {result.raw_readings} → Cleaned: {result.cleaned_readings} → Saved: {result.saved_readings} | "
+        f"Raw: {result.raw_readings} → Saved: {result.saved_readings} | "
         f"Duration: {result.duration_seconds:.1f}s"
     )
-    if result.errors:
-        logger.warning(f"⚠️ Errors: {result.errors}")
     logger.info("=" * 50)
 
     return result
 
+def run_pipeline() -> PipelineResult:
+    """Sync entry point for the pipeline."""
+    return asyncio.run(run_pipeline_async())
 
 if __name__ == "__main__":
     from src.database.connection import init_db

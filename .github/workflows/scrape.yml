@@ -29,3 +29,12 @@ jobs:
           AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python -m src.data.pipeline
+
+      - name: Run Proactive Alerts
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          AQICN_API_KEY: ${{ secrets.AQICN_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m src.bot.proactive_alerts

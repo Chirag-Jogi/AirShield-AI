@@ -4,7 +4,7 @@ Defines what data gets stored in the database.
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, Float, String, DateTime
+from sqlalchemy import Column, Integer, Float, String, DateTime, Boolean, BigInteger
 from src.database.connection import Base
 
 
@@ -46,3 +46,22 @@ class AirQualityReading(Base):
 
     def __repr__(self):
         return f"<AirQuality {self.city} AQI={self.aqi} PM2.5={self.pm2_5} at {self.measured_at}>"
+
+
+
+class User(Base):
+    """
+    Stores permanent user profiles and preferences.
+    """
+    __tablename__ = "users"
+
+    telegram_id = Column(BigInteger, primary_key=True)  # Unique ID
+    first_name = Column(String)                      # Name
+    home_city = Column(String, nullable=True)      # Preferred city
+    health_profile = Column(String, default="None")  # Asthma, etc.
+    is_alert_enabled = Column(Boolean, default=True)    # True, False
+    last_morning_at = Column(DateTime, nullable=True)   # Date of last morning brief
+    last_alert_at = Column(DateTime, nullable=True)     # Time of last emergency alert
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_active = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+        
