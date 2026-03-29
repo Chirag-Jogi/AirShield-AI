@@ -38,8 +38,10 @@ if __name__ == '__main__':
     request = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
     application = ApplicationBuilder().token(TOKEN).request(request).post_shutdown(post_shutdown).build()
     
-    # Register Handlers from separate module
+    # Register Handlers
     application.add_handler(CommandHandler('start', handlers.start))
+    application.add_handler(CommandHandler('city', handlers.city_cmd))
+    application.add_handler(CommandHandler('settings', handlers.settings_cmd))
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handlers.handle_message))
     application.add_handler(CallbackQueryHandler(handlers.button_handler))
     

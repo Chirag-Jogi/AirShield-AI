@@ -62,6 +62,7 @@ class User(Base):
     is_alert_enabled = Column(Boolean, default=True)    # True, False
     last_morning_at = Column(DateTime, nullable=True)   # Date of last morning brief
     last_alert_at = Column(DateTime, nullable=True)     # Time of last emergency alert
+    chat_history = Column(String, default="[]")        # Persistent context (JSON string)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_active = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
         

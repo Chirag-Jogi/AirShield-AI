@@ -169,3 +169,13 @@ def update_user_last_alert(telegram_id: int):
         session.commit()
     finally:
         session.close()
+
+
+def update_user_history(telegram_id: int, history_json: str):
+    """Save the persistent chat history to the cloud database."""
+    session = get_session()
+    try:
+        session.query(User).filter(User.telegram_id == telegram_id).update({"chat_history": history_json})
+        session.commit()
+    finally:
+        session.close()
