@@ -1,0 +1,17 @@
+name: AirShield Heartbeat
+# Keeps the Render service awake by pinging it every 14 min.
+# Render Free Tier sleeps after 15 minutes of inactivity.
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'  # Every 14 minutes
+  workflow_dispatch:        # Manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping AirShield AI
+        run: |
+          curl -I https://airshield-bot.onrender.com
+          echo "Heartbeat sent to AirShield AI 🛡️"
