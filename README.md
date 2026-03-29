@@ -1,34 +1,33 @@
 <div align="center">
   <img src="https://img.icons8.com/parakeet-line/128/000000/air-quality.png" alt="AirShield Logo" width="100"/>
-  <h1>AirShield AI 🌍🌬️</h1>
-  <p><strong>An Industry-Grade Air Pollution Prediction & AI Health Advisor Platform</strong></p>
+  <h1>AirShield AI 🌍🛡️</h1>
+  <p><strong>The "Elite" 24/7 Proactive AI Guardian for Respiratory Health</strong></p>
   
   [![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python&logoColor=white)](https://python.org)
-  [![Streamlit](https://img.shields.io/badge/Streamlit-1.32-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
-  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791?logo=postgresql&logoColor=white)](https://supabase.com)
-  [![XGBoost](https://img.shields.io/badge/Machine%20Learning-XGBoost-orange?logo=scikit-learn)](https://xgboost.readthedocs.io/)
-  [![Docker](https://img.shields.io/badge/Architecture-Docker-2496ED?logo=docker&logoColor=white)](https://docker.com)
+  [![Telegram](https://img.shields.io/badge/Interface-Telegram_Bot-26A5E4?logo=telegram&logoColor=white)](https://t.me/AirShield_Bot)
+  [![PostgreSQL](https://img.shields.io/badge/DB-Supabase_PostgreSQL-336791?logo=postgresql&logoColor=white)](https://supabase.com)
+  [![Hosting](https://img.shields.io/badge/Cloud-Render-46E3B7?logo=render&logoColor=white)](https://render.com)
+  [![Automation](https://img.shields.io/badge/Automation-GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 </div>
 
-<br>
+---
 
 ## 📖 Overview
-**AirShield AI** is an advanced, full-stack data engineering and machine learning platform designed to tackle one of the world's most pressing health crises: Air Pollution. 
+**AirShield AI** is a production-grade, cloud-native MLOps platform that evolves air quality monitoring from passive data display to **proactive health protection**. 
 
-Rather than simply displaying current Air Quality Index (AQI) values, AirShield AI implements an automated **Extract, Transform, Load (ETL) pipeline** that scrapes live meteorological data across 20 major Indian cities, stores it in a cloud PostgreSQL database, and utilizes a highly-trained **XGBoost Machine Learning model** to forecast PM2.5 pollution levels up to 7 days into the future. 
+Built for modern urban environments, AirShield acts as a "Concierge for your Lungs." It automatically scrapes live pollutant data across 20+ major cities, predicts future spikes using an **XGBoost Machine Learning model**, and provides personalized health advice through a witty, caring **Telegram AI Buddy**.
 
-Furthermore, the platform integrates an **autonomous LLM Agent** (powered by NVIDIA Nemotron 30B / Meta Llama 3 via OpenRouter) that dynamically analyzes these mathematical predictions to provide contextual, hyper-personalized respiratory health and scheduling advice to vulnerable individuals.
+Unlike standard trackers, AirShield implements **"Steel Memory" logic**—a stateful alerting system that ensures you get exactly one morning briefing and real-time emergency warnings only when you truly need them, regardless of cloud scheduling fluctuations.
 
 ---
 
 ## ⚡ Key Features
 
-* **📡 Automated ETL Pipeline:** A Python-based background scheduler (`APScheduler`) routinely extracts live pollutant metrics (PM2.5, PM10, NO2, SO2, O3) and meteorological data from the OpenWeatherMap API, processing and writing it to a persistent PostgreSQL database.
-* **🔮 Predictive ML Engine:** A pre-trained XGBoost regression model (trained on historical datasets) evaluates complex weather patterns, temperature inversions, wind speeds, and temporal data (month, day-of-week) to predict severe pollution events before they happen.
-* **🤖 Multi-Model AI Health Advisor:** An integrated generative AI agent designed to consume numerical ML forecasts. It acts as a respiratory health consultant. If the primary LLM faces rate limits (HTTP 429), the Agent's resilient failover architecture seamlessly reroutes the request through a designated cascade of ultra-fast fallback models (e.g., Gemma 27B, Mistral 24B).
-* **🗺️ Interactive Geospatial Dashboard:** Built with Streamlit and Folium, the dashboard provides a dynamic choropleth map of India, allowing users to visually track massive pollution fronts moving across the subcontinent in real-time.
-* **📊 Time-Series Analytics:** Interactive Plotly graphs map 24-hour PM2.5 forecasts and allow for direct cross-city pollutant comparisons.
-* **🐳 Docker Microservices:** The entire architecture is containerized. A `docker-compose` network isolates the Streamlit web GUI from the background scraping worker, ensuring production-grade scalability.
+* **🤖 24/7 AI Guardian (Telegram):** An interactive LLM-powered bot (NVIDIA Nemotron 30B / Llama 3) that adopts a casual, "Swiggy-style" personal buddy persona. No jargon, just witty and actionable health advice.
+* **🧠 Steel Memory Logic:** A custom state-tracking engine built on PostgreSQL that prevents notification spam and ensures resilient daily deliveries despite GitHub Action scheduling delays.
+* **📡 Autonomous ETL Pipeline:** A serverless data harvester that wakes up every 30 minutes via **GitHub Actions** to extract, transform, and load meteorological metrics into the cloud.
+* **🔮 Predictive ML Engine:** An XGBoost regressor that evaluates 24-hour weather patterns and wind speeds to forecast PM2.5 trends with an **R² score of 0.77+**.
+* **🏙️ Multi-City Persistence:** Tracks individual user preferences, home cities, and alert history for hyper-personalized health monitoring.
 
 ---
 
@@ -37,119 +36,77 @@ Furthermore, the platform integrates an **autonomous LLM Agent** (powered by NVI
 ```mermaid
 graph TD;
 
-    A[OpenWeatherMap API] -->|"Raw JSON"| B[ETL Pipeline];
-    B --> C[Data Cleaning & Validation];
-    C --> D[Feature Engineering];
-    D -->|"Processed Data"| E[(Supabase PostgreSQL)];
+    subgraph "Cloud Automation (GitHub)"
+        A[GitHub Actions Scraper] -->|"30-min Cron"| B[ETL Pipeline];
+    end
 
-    E -->|"Historical Data"| F[XGBoost Training];
-    F --> G[Model Artifact];
+    subgraph "External APIs"
+        C[OpenWeatherMap] --> B;
+        D[AQICN API] --> B;
+    end
 
-    G --> H[Prediction API];
-    E -->|"Latest Data"| H;
+    subgraph "Database Tier (Supabase)"
+        B -->|"Sync"| E[(Supabase PostgreSQL)];
+    end
 
-    H -->|"7-Day PM2.5 Forecast"| I[Context Builder];
+    subgraph "Intelligence Tier"
+        E -->|"Features"| F[XGBoost Forecaster];
+        F -->|"Predictions"| G[AI Agent Context];
+        H[OpenRouter LLM] <--> G;
+    end
 
-    I --> J[Prompt Formatter];
-    J --> K{Model Router};
-
-    K -->|"Primary"| L[OpenRouter API];
-    K -->|"Fallback"| M[Backup Model API];
-
-    L --> N[LLM Response];
-    M --> N;
-
-    E -->|"Live Metrics API"| O[Streamlit Dashboard];
-    N -->|"Health Insights"| O;
-    H -->|"Predictions"| O;
+    subgraph "Communication Tier (Render)"
+        G --> I[AirShield Bot Service];
+        I <--> J[Telegram User];
+    end
  ```   
 
 ### Tech Stack
-| Tier | Technologies Used |
+| Tier | Technologies |
 | :--- | :--- |
-| **Frontend UI** | Streamlit, Plotly (Data Viz), Folium (Maps) |
-| **Backend / DB** | Python, SQLAlchemy (ORM), PostgreSQL (Supabase Cloud) |
-| **Machine Learning** | Scikit-Learn, XGBoost, Pandas, Numpy, Joblib |
-| **Generative AI** | OpenRouter REST API, NVIDIA Nemotron 30B, Meta Llama-3 |
-| **Data Engineering** | APScheduler, Background CLI Workers |
-| **DevOps** | Docker, Docker-Compose, Streamlit Community Cloud |
+| **Interface** | Python-Telegram-Bot, HTTPX (Sentinel Client) |
+| **Logic/State** | Python 3.11, SQLAlchemy, Pydantic, Tenacity |
+| **Database** | PostgreSQL (Supabase Cloud) |
+| **Predictive AI** | XGBoost, Scikit-Learn, Pandas, MLflow |
+| **Generative AI** | NVIDIA Nemotron 30B, Meta Llama-3 (via OpenRouter) |
+| **Cloud/DevOps** | Render (24/7 Bot), GitHub Actions (Scraper), Docker |
 
 ---
 
-## 🚀 Getting Started
-
-Follow these steps to deploy the AirShield AI platform on your local machine or server.
+## 🚀 Deployment & Setup
 
 ### 1. Prerequisites
-You must have Python 3.11+ (or Docker) installed on your system. You will also need three free API keys:
-1. **[OpenWeatherMap API Key](https://openweathermap.org/api):** For live meteorological data.
-2. **[OpenRouter API Key](https://openrouter.ai/):** For free access to advanced LLMs.
-3. **[Supabase Project URL](https://supabase.com/):** For the cloud PostgreSQL connection pooling string.
+You need four free API keys to go live:
+1. **[Bot Token](https://t.me/Botfather):** From Telegram BotFather.
+2. **[OpenWeather API](https://openweathermap.org/api):** For meteorological data.
+3. **[OpenRouter API](https://openrouter.ai/):** For model access.
+4. **[Supabase DB URL](https://supabase.com/):** For cloud PostgreSQL.
 
-### 2. Installation (Standard Python)
-
-Clone the repository and install the dependencies:
+### 2. Standard Installation
 ```bash
-git clone https://github.com/yourusername/airshield-ai.git
-cd airshield-ai
-
-# Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-
-# Install dependencies
+git clone https://github.com/Chirag-Jogi/AirShield-AI.git
 pip install -r requirements.txt
+python -m src.bot.bot
 ```
 
-### 3. Environment Configuration
-Create a `.env` file in the root of the project and inject your credentials:
+### 3. Environment Secrets (.env)
 ```env
-OPENWEATHER_API_KEY=your_openweathermap_key_here
-OPENROUTER_API_KEY=your_openrouter_key_here
-DATABASE_URL=postgresql://postgres.xxx:password@aws-0.pooler.supabase.com:6543/postgres
+TELEGRAM_BOT_TOKEN=your_token
+OPENROUTER_API_KEY=your_key
+DATABASE_URL=your_supabase_url
+OPENWEATHER_API_KEY=your_key
+AQICN_API_KEY=your_key
 ```
 
-### 4. Database Initialization & Data Seeding
-Before launching the UI, you must compile the SQL schema and scrape the initial batch of live data into your cloud database:
-```bash
-# 1. Build the tables in Supabase
-python -c "from src.database.connection import init_db; init_db()"
-
-# 2. Trigger the automated ETL pipeline (runs a live scrape)
-python -m src.data.pipeline
-```
-
-### 5. Launching the Platform
-
-**Option A: Running Locally (Streamlit)**
-```bash
-streamlit run dashboard/app.py
-```
-*The web interface will instantly become available at `http://localhost:8501`.*
-
-**Option B: Running via Docker (Production Microservices)**
-AirShield AI comes pre-configured with a powerful dual-container architecture.
-```bash
-docker compose up --build
-```
-*This command will spin up two isolated containers:*
-1. **`airshield_web`**: Hosts the Streamlit frontend UI.
-2. **`airshield_worker`**: Runs the Python `APScheduler` infinitely in the background, updating the Supabase database automatically every hour.
-
----
-
-## 🔬 Machine Learning Performance (XGBoost)
-The predictive model was trained on historical Indian air quality datasets targeting the highly volatile PM2.5 metric. 
-* **Model Type:** Extreme Gradient Boosting Regressor (`XGBRegressor`)
-* **Core Features:** Temperature, Humidity, AQI, Day of Week, Month
-* **R² Score:** 0.77+ (Demonstrates strong correlation between meteorological inputs and severe pollution spikes).
+### 4. 24/7 Cloud Hosting (Render)
+This repository includes a `render.yaml` blueprint. Simply connect your GitHub repo to [Render.com](https://render.com) and deploy as a **Blueprint Instance**. All configurations and health checks are handled automatically.
 
 ---
 
 ## 👨‍💻 Developed By
 **Chirag**  
-*Data Scientist & AI Engineer*  
-Passionate about building highly-scalable, socially-impactful AI applications leveraging modern data workflows.
+*AI Engineer & Data Engineer*  
+*Specializing in High-Performance Agentic Pipelines and MLOps.*
 
 ---
-*If you find this repository useful, feel free to give it a ⭐!*
+*If you find this project impactful, feel free to give it a ⭐!*
