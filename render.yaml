@@ -16,5 +16,9 @@ services:
         sync: false
       - key: AQICN_API_KEY
         sync: false
+      - key: APP_ENV
+        value: production
+      - key: WEBHOOK_URL
+        sync: false  # Format: https://your-app.onrender.com/webhook
       - key: PYTHON_VERSION
         value: 3.11.0

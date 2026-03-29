@@ -30,17 +30,23 @@ async def fetch_air_quality(api_key: str, city_name: str, lat: float, lon: float
         pollution = data["list"][0]
         components = pollution["components"]
 
+        pm2_5 = components.get("pm2_5", 0)
+        
+        # Elite "Trust" Upgrade: Replace 1-5 index with 0-500 scale
+        from src.utils.aqi_utils import calculate_us_aqi
+        real_aqi = calculate_us_aqi(pm2_5)
+
         return {
             "city": city_name,
             "latitude": lat,
             "longitude": lon,
-            "aqi": pollution["main"]["aqi"],
+            "aqi": real_aqi,  # High-resolution Professional AQI
             "co": components.get("co"),
             "no": components.get("no"),
             "no2": components.get("no2"),
             "o3": components.get("o3"),
             "so2": components.get("so2"),
-            "pm2_5": components.get("pm2_5"),
+            "pm2_5": pm2_5,
             "pm10": components.get("pm10"),
             "nh3": components.get("nh3"),
             "timestamp": datetime.fromtimestamp(

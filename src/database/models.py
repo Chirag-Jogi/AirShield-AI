@@ -1,18 +1,16 @@
 """
 Database Models (Table Schemas)
 Defines what data gets stored in the database.
+All DateTimes are standardized to UTC-Naive for PostgreSQL-Asyncpg consistency.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import Column, Integer, Float, String, DateTime, Boolean, BigInteger
 from src.database.connection import Base
-
 
 class AirQualityReading(Base):
     """
     Each row = one air quality reading for one city at one time.
-    
-    Example: Delhi's pollution data at 2:30 PM on March 23, 2026
     """
     __tablename__ = "air_quality_readings"
 
@@ -20,34 +18,32 @@ class AirQualityReading(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # --- Location ---
-    city = Column(String, nullable=False, index=True)  # index=True makes queries faster
+    city = Column(String, nullable=False, index=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
 
     # --- Air Quality Index ---
-    aqi = Column(Integer, nullable=True)  # 1=Good, 2=Fair, 3=Moderate, 4=Poor, 5=Very Poor
+    aqi = Column(Integer, nullable=True)
 
     # --- Pollutants (μg/m³) ---
-    co = Column(Float)     # Carbon Monoxide
-    no = Column(Float)     # Nitrogen Monoxide
-    no2 = Column(Float)    # Nitrogen Dioxide
-    o3 = Column(Float)     # Ozone
-    so2 = Column(Float)    # Sulphur Dioxide
-    pm2_5 = Column(Float)  # Fine Particles (most dangerous!)
-    pm10 = Column(Float)   # Coarse Particles
-    nh3 = Column(Float)    # Ammonia
+    co = Column(Float)
+    no = Column(Float)
+    no2 = Column(Float)
+    o3 = Column(Float)
+    so2 = Column(Float)
+    pm2_5 = Column(Float)
+    pm10 = Column(Float)
+    nh3 = Column(Float)
 
-    # --- Timestamps ---
-    measured_at = Column(DateTime, nullable=False)  # When the API measured it
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))  # When WE saved it
+    # --- Timestamps (Naive UTC) ---
+    measured_at = Column(DateTime(timezone=False), nullable=False)
+    created_at = Column(DateTime(timezone=False), default=datetime.utcnow)
 
     # --- Data Source ---
-    source = Column(String, default="openweathermap")  # Which API the data came from
+    source = Column(String, default="openweathermap")
 
     def __repr__(self):
         return f"<AirQuality {self.city} AQI={self.aqi} PM2.5={self.pm2_5} at {self.measured_at}>"
-
-
 
 class User(Base):
     """
@@ -55,14 +51,15 @@ class User(Base):
     """
     __tablename__ = "users"
 
-    telegram_id = Column(BigInteger, primary_key=True)  # Unique ID
-    first_name = Column(String)                      # Name
-    home_city = Column(String, nullable=True)      # Preferred city
-    health_profile = Column(String, default="None")  # Asthma, etc.
-    is_alert_enabled = Column(Boolean, default=True)    # True, False
-    last_morning_at = Column(DateTime, nullable=True)   # Date of last morning brief
-    last_alert_at = Column(DateTime, nullable=True)     # Time of last emergency alert
-    chat_history = Column(String, default="[]")        # Persistent context (JSON string)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    last_active = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-        
+    telegram_id = Column(BigInteger, primary_key=True)
+    first_name = Column(String)
+    home_city = Column(String, nullable=True)
+    health_profile = Column(String, default="None")
+    is_alert_enabled = Column(Boolean, default=True)
+    
+    # --- Timestamps (Naive UTC) ---
+    last_morning_at = Column(DateTime(timezone=False), nullable=True)
+    last_alert_at = Column(DateTime(timezone=False), nullable=True)
+    chat_history = Column(String, default="[]")
+    created_at = Column(DateTime(timezone=False), default=datetime.utcnow)
+    last_active = Column(DateTime(timezone=False), default=datetime.utcnow, onupdate=datetime.utcnow)

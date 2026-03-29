@@ -1,181 +1,151 @@
 """
-Database Query Functions
-Save and read air quality data from the database.
+Database Query Functions — Async Edition
+Updated for non-blocking I/O with AsyncSession.
+All inputs are sanitized to 'Naive UTC' via to_naive_utc().
 """
 
 from datetime import datetime
-from sqlalchemy import desc
-from src.database.connection import get_session
-from src.database.models import AirQualityReading
-from src.database.models import User
+from sqlalchemy import select, desc, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from src.database.models import AirQualityReading, User
 from src.utils.logger import logger
+from src.utils.time_utils import to_naive_utc
 
-
-def save_readings(readings: list[dict]) -> int:
+async def save_readings(session: AsyncSession, readings: list[dict]) -> int:
     """
-    Save a list of air quality readings to the database.
-    Saves each record individually — a single bad record does NOT
-    roll back the entire batch.
-    Returns number of successfully saved records.
+    Save a list of air quality readings asynchronously.
     """
-    session = get_session()
     saved = 0
     errors = 0
 
-    try:
-        for data in readings:
-            try:
-                reading = AirQualityReading(
-                    city=data["city"],
-                    latitude=data["latitude"],
-                    longitude=data["longitude"],
-                    aqi=data["aqi"],
-                    co=data.get("co"),
-                    no=data.get("no"),
-                    no2=data.get("no2"),
-                    o3=data.get("o3"),
-                    so2=data.get("so2"),
-                    pm2_5=data.get("pm2_5"),
-                    pm10=data.get("pm10"),
-                    nh3=data.get("nh3"),
-                    measured_at=datetime.fromisoformat(data["timestamp"]),
-                    source=data.get("source", "openweathermap"),
-                )
-                session.add(reading)
-                session.flush()  # validate this record immediately
-                saved += 1
-            except Exception as e:
-                session.rollback()
-                errors += 1
-                logger.error(
-                    f"❌ Failed to save record for {data.get('city', '?')}: {e}"
-                )
+    for data in readings:
+        try:
+            # 1. Parse timestamp and ensure it is Naive UTC
+            raw_ts = data["timestamp"]
+            naive_ts = to_naive_utc(datetime.fromisoformat(raw_ts))
+            
+            reading = AirQualityReading(
+                city=data["city"],
+                latitude=data["latitude"],
+                longitude=data["longitude"],
+                aqi=data["aqi"],
+                co=data.get("co"),
+                no=data.get("no"),
+                no2=data.get("no2"),
+                o3=data.get("o3"),
+                so2=data.get("so2"),
+                pm2_5=data.get("pm2_5"),
+                pm10=data.get("pm10"),
+                nh3=data.get("nh3"),
+                measured_at=naive_ts,
+                source=data.get("source", "openweathermap"),
+                # created_at is handled by the model default
+            )
+            session.add(reading)
+            await session.flush()  # validate this record immediately
+            saved += 1
+        except Exception as e:
+            await session.rollback()
+            errors += 1
+            logger.error(f"❌ Failed to save record for {data.get('city', '?')}: {e}")
 
-        session.commit()
-        logger.info(f"✅ Saved {saved} readings to database ({errors} errors)")
-
-    except Exception as e:
-        session.rollback()
-        logger.error(f"❌ Batch commit failed: {e}")
-
-    finally:
-        session.close()
-
+    await session.commit()
+    logger.info(f"✅ Saved {saved} readings to database ({errors} errors)")
     return saved
 
-
-def get_latest_readings(limit: int = 20) -> list:
+async def get_latest_readings(session: AsyncSession, limit: int = 20) -> list:
     """Get the most recent readings across all cities."""
-    session = get_session()
-    try:
-        return (
-            session.query(AirQualityReading)
-            .order_by(desc(AirQualityReading.created_at))
-            .limit(limit)
-            .all()
-        )
-    finally:
-        session.close()
+    stmt = select(AirQualityReading).order_by(desc(AirQualityReading.created_at)).limit(limit)
+    result = await session.execute(stmt)
+    return result.scalars().all()
 
-
-def get_city_readings(city: str, limit: int = 100) -> list:
+async def get_city_readings(session: AsyncSession, city: str, limit: int = 100) -> list:
     """Get readings for a specific city."""
-    session = get_session()
-    try:
-        return (
-            session.query(AirQualityReading)
-            .filter(AirQualityReading.city == city)
-            .order_by(desc(AirQualityReading.measured_at))
-            .limit(limit)
-            .all()
-        )
-    finally:
-        session.close()
+    stmt = (
+        select(AirQualityReading)
+        .filter(AirQualityReading.city == city)
+        .order_by(desc(AirQualityReading.measured_at))
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    return result.scalars().all()
 
-
-def get_city_status(city: str):
+async def get_city_status(session: AsyncSession, city: str):
     """Get the absolute latest reading for a city."""
-    session = get_session()
-    try:
-        return (
-            session.query(AirQualityReading)
-            .filter(AirQualityReading.city == city)
-            .order_by(desc(AirQualityReading.measured_at))
-            .first()
-        )
-    finally:
-        session.close()
+    stmt = (
+        select(AirQualityReading)
+        .filter(AirQualityReading.city == city)
+        .order_by(desc(AirQualityReading.measured_at))
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    return result.scalars().first()
 
-
-
-
-def get_or_create_user(telegram_id: int, first_name: str) -> User:
+async def get_or_create_user(session: AsyncSession, telegram_id: int, first_name: str) -> User:
     """Check if user exists; if not, create them."""
-    session = get_session()
-    try:
-        user = session.query(User).filter(User.telegram_id == telegram_id).first()
-        if not user:
-            user = User(telegram_id=telegram_id, first_name=first_name)
-            session.add(user)
-            session.commit()
-            session.refresh(user)
-        return user
-    finally:
-        session.close()
+    stmt = select(User).filter(User.telegram_id == telegram_id)
+    result = await session.execute(stmt)
+    user = result.scalars().first()
+    
+    if not user:
+        user = User(telegram_id=telegram_id, first_name=first_name)
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+    return user
 
-
-def get_active_users() -> list[User]:
+async def get_active_users(session: AsyncSession) -> list[User]:
     """Get all users who have alerts enabled."""
-    session = get_session()
-    try:
-        return session.query(User).filter(User.is_alert_enabled == True).all()
-    finally:
-        session.close()
+    stmt = select(User).filter(User.is_alert_enabled == True)
+    result = await session.execute(stmt)
+    return result.scalars().all()
 
-def update_user_city(telegram_id: int, city_name: str):
+async def update_user_city(session: AsyncSession, telegram_id: int, city_name: str):
     """Update a user's home city."""
-    session = get_session()
-    try:
-        session.query(User).filter(User.telegram_id == telegram_id).update({"home_city": city_name})
-        session.commit()
-    finally:
-        session.close()
+    stmt = (
+        update(User)
+        .where(User.telegram_id == telegram_id)
+        .values(home_city=city_name)
+    )
+    await session.execute(stmt)
+    await session.commit()
 
-def update_user_health(telegram_id: int, profile: str):
+async def update_user_health(session: AsyncSession, telegram_id: int, profile: str):
     """Update a user's health profile."""
-    session = get_session()
-    try:
-        session.query(User).filter(User.telegram_id == telegram_id).update({"health_profile": profile})
-        session.commit()
-    finally:
-        session.close()
+    stmt = (
+        update(User)
+        .where(User.telegram_id == telegram_id)
+        .values(health_profile=profile)
+    )
+    await session.execute(stmt)
+    await session.commit()
 
-
-def update_user_last_morning(telegram_id: int):
+async def update_user_last_morning(session: AsyncSession, telegram_id: int):
     """Mark that the user was sent their morning briefing today."""
-    session = get_session()
-    try:
-        session.query(User).filter(User.telegram_id == telegram_id).update({"last_morning_at": datetime.utcnow()})
-        session.commit()
-    finally:
-        session.close()
+    stmt = (
+        update(User)
+        .where(User.telegram_id == telegram_id)
+        .values(last_morning_at=to_naive_utc(datetime.utcnow()))
+    )
+    await session.execute(stmt)
+    await session.commit()
 
-
-def update_user_last_alert(telegram_id: int):
+async def update_user_last_alert(session: AsyncSession, telegram_id: int):
     """Mark that the user was sent an emergency alert just now."""
-    session = get_session()
-    try:
-        session.query(User).filter(User.telegram_id == telegram_id).update({"last_alert_at": datetime.utcnow()})
-        session.commit()
-    finally:
-        session.close()
+    stmt = (
+        update(User)
+        .where(User.telegram_id == telegram_id)
+        .values(last_alert_at=to_naive_utc(datetime.utcnow()))
+    )
+    await session.execute(stmt)
+    await session.commit()
 
-
-def update_user_history(telegram_id: int, history_json: str):
+async def update_user_history(session: AsyncSession, telegram_id: int, history_json: str):
     """Save the persistent chat history to the cloud database."""
-    session = get_session()
-    try:
-        session.query(User).filter(User.telegram_id == telegram_id).update({"chat_history": history_json})
-        session.commit()
-    finally:
-        session.close()
+    stmt = (
+        update(User)
+        .where(User.telegram_id == telegram_id)
+        .values(chat_history=history_json)
+    )
+    await session.execute(stmt)
+    await session.commit()

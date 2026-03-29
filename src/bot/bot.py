@@ -1,57 +1,114 @@
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+"""
+AirShield AI — Elite Cloud-Ready Bot Service 🛡️☁️
+Powered by FastAPI + python-telegram-bot (Async).
+Supports 'Stay-Awake' Webhooks for Render 24/7 reliability.
+"""
+
+import asyncio
 import logging
 import os
+import uvicorn
+from fastapi import FastAPI, Request
+from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 from telegram.request import HTTPXRequest
-from dotenv import load_dotenv
 
 # Project tools
+from config import settings
 from src.bot import handlers
 from src.utils.http_client import SentinelClient
+from src.utils.logger import logger
 
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    """Minimal server to satisfy Render's port check."""
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"AirShield AI is alive!")
+# Initialize FastAPI App
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.PROJECT_VERSION,
+    description="Elite AI-driven Air Quality Guardian"
+)
 
-    def do_HEAD(self):
-        self.send_response(200)
-        self.end_headers()
+# Global Telegram Application Instance
+tg_application = None
 
-    def do_HEAD(self):
-        self.send_response(200)
-        self.end_headers()
+@app.get("/")
+async def root():
+    """Root endpoint for health check and 'Stay Awake' pings."""
+    return {"status": "alive", "engine": "AirShield Elite Core", "env": settings.APP_ENV}
 
-def run_health_check():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
-    server.serve_forever()
+@app.get("/health")
+async def health_check():
+    """Formal health check endpoint for Render/uptime monitors."""
+    return {"status": "healthy", "engine": "FastAPI + PTB Async"}
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-load_dotenv()
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    """
+    Elite Webhook Endpoint.
+    Instantly wakes up the Render service when a user sends a message!
+    """
+    if tg_application is None:
+        return {"status": "error", "message": "Bot not initialized"}
+    
+    data = await request.json()
+    update = Update.de_json(data, tg_application.bot)
+    await tg_application.process_update(update)
+    return {"status": "ok"}
 
-async def post_shutdown(application):
-    """Clean up resources when the bot stops."""
+async def start_telegram_bot():
+    """Initialize and start the Telegram Bot based on the environment."""
+    global tg_application
+    
+    # Configure resilient HTTPX request
+    request = HTTPXRequest(
+        connect_timeout=settings.CONNECT_TIMEOUT,
+        read_timeout=settings.READ_TIMEOUT
+    )
+    
+    # Build Application
+    tg_application = ApplicationBuilder().token(settings.TELEGRAM_BOT_TOKEN).request(request).build()
+    
+    # Register Elite Handlers
+    tg_application.add_handler(CommandHandler('start', handlers.start))
+    tg_application.add_handler(CommandHandler('city', handlers.city_cmd))
+    tg_application.add_handler(CommandHandler('settings', handlers.settings_cmd))
+    tg_application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handlers.handle_message))
+    tg_application.add_handler(CallbackQueryHandler(handlers.button_handler))
+    
+    await tg_application.initialize()
+    
+    if settings.APP_ENV == "production":
+        # --- WEBHOOK MODE (Elite Cloud) ---
+        if not settings.WEBHOOK_URL:
+            logger.error("❌ WEBHOOK_URL not set in production! Falling back to polling...")
+            await tg_application.updater.start_polling()
+        else:
+            logger.info(f"🕸️ Setting Webhook to: {settings.WEBHOOK_URL}")
+            await tg_application.bot.set_webhook(url=settings.WEBHOOK_URL)
+            # We don't need updater.start_webhook() here because FastAPI handles the POST request
+    else:
+        # --- POLLING MODE (Local Dev) ---
+        logger.info("📡 Starting Polling (Development Mode)...")
+        await tg_application.updater.start_polling()
+    
+    await tg_application.start()
+    logger.info("🚀 Friendly AI Guardian is fully synchronized and ready for the cloud.")
+
+@app.on_event("startup")
+async def startup_event():
+    """Triggered when FastAPI starts."""
+    asyncio.create_task(start_telegram_bot())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on shutdown."""
+    global tg_application
+    if tg_application:
+        await tg_application.stop()
+        await tg_application.shutdown()
+    
     await SentinelClient.close_client()
+    logger.info("🔌 System shutdown complete. All clients closed.")
 
 if __name__ == '__main__':
-    # Start the health check server in a background thread for Render
-    threading.Thread(target=run_health_check, daemon=True).start()
-    
-    # Configure Application
-    request = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
-    application = ApplicationBuilder().token(TOKEN).request(request).post_shutdown(post_shutdown).build()
-    
-    # Register Handlers
-    application.add_handler(CommandHandler('start', handlers.start))
-    application.add_handler(CommandHandler('city', handlers.city_cmd))
-    application.add_handler(CommandHandler('settings', handlers.settings_cmd))
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handlers.handle_message))
-    application.add_handler(CallbackQueryHandler(handlers.button_handler))
-    
-    print("🚀 Friendly AI Guardian is live (Elite Structure, Resilient, 24/7 Cloud Support)...")
-    application.run_polling()
+    # Use environment-provided port for Render
+    port = int(settings.PORT)
+    uvicorn.run(app, host="0.0.0.0", port=port)

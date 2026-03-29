@@ -4,14 +4,19 @@ name: AirShield Heartbeat
 
 on:
   schedule:
-    - cron: '*/14 * * * *'  # Every 14 minutes
-  workflow_dispatch:        # Manual trigger
+    - cron: '*/10 * * * *'  # Pulse every 10 minutes (to try and beat the 15-min sleep)
+  workflow_dispatch:        
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping AirShield AI
+      - name: 💓 Reach Out Heartbeat (Dual-Pulse)
         run: |
-          curl -I https://airshield-bot.onrender.com
-          echo "Heartbeat sent to AirShield AI 🛡️"
+          # Pulse 1
+          curl -I ${{ secrets.RENDER_URL }}
+          echo "Pulse 1 sent. Waiting 5 minutes to bridge the gap..."
+          sleep 300
+          # Pulse 2
+          curl -I ${{ secrets.RENDER_URL }}
+          echo "Pulse 2 sent. Heartbeat complete. 🛡️"

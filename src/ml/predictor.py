@@ -1,142 +1,109 @@
 """
-PM2.5 Predictor
-Loads the trained model and predicts PM2.5 from live or input data.
-
-Usage:
-    from src.ml.predictor import predict_pm25
-    result = predict_pm25("Delhi", hour=8, month=1, no2=45.0, co=1.2, ...)
+PM2.5 Predictor (Elite Optimized) 🔮🛡️
+Loads the trained model once (Singleton) and predicts PM2.5 from input data.
 """
 
 import joblib
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
-from src.utils.time_utils import get_ist_now
+from typing import Optional
 
 from config import settings
 from src.data.cities import INDIAN_CITIES
 from src.utils.logger import logger
+from src.utils.time_utils import get_ist_now
 
+# --- Global Singleton Model ---
+_MODEL_CACHE = {}
 
 # City name → numeric code (must match training encoding)
 CITY_CODES = {city.name: i for i, city in enumerate(
     sorted(INDIAN_CITIES, key=lambda c: c.name)
 )}
 
-
-def load_model(filename: str = "xgboost_pm25.joblib"):
-    """Load the trained model from disk."""
-    filepath = settings.MODELS_DIR / filename
-    if not filepath.exists():
-        logger.error(f"Model not found: {filepath}. Run train_model.py first!")
-        return None
-    model = joblib.load(filepath)
-    logger.info(f"✅ Model loaded: {filepath}")
-    return model
-
+def get_model(filename: str = "xgboost_pm25.joblib"):
+    """
+    Singleton loader to prevent redundant disk I/O and log spam.
+    Loads the model once and keeps it in memory.
+    """
+    if filename not in _MODEL_CACHE:
+        filepath = settings.MODELS_DIR / filename
+        if not filepath.exists():
+            logger.error(f"Model not found: {filepath}. Prediction fallback active.")
+            return None
+        _MODEL_CACHE[filename] = joblib.load(filepath)
+        logger.info(f"✅ Predictor Engine Cloud-Loaded: {filepath.name}")
+    
+    return _MODEL_CACHE[filename]
 
 def predict_pm25(
     city: str,
     hour: int | None = None,
     month: int | None = None,
     day_of_week: int | None = None,
-    no: float | None = None,
-    no2: float | None = None,
-    co: float | None = None,
-    so2: float | None = None,
-    o3: float | None = None,
-    nh3: float | None = None,
-    pm10: float | None = None,
+    # Pollutants
+    no: float = 0.0,
+    no2: float = 0.0,
+    co: float = 0.0,
+    so2: float = 0.0,
+    o3: float = 0.0,
+    nh3: float = 0.0,
+    pm10: float = 0.0,
 ) -> dict:
     """
     Predict PM2.5 for a city given current conditions.
-
-    Args:
-        city: City name (e.g., "Delhi")
-        hour: Current hour (0-23). Auto-detected if None.
-        month: Current month (1-12). Auto-detected if None.
-        Other args: Current pollutant readings from live API.
-
-    Returns:
-        dict with predicted PM2.5 value and input details.
+    Optimized for high-frequency forecast generation.
     """
-    # Auto-detect time if not provided
+    # 1. Auto-detect time context
     now = get_ist_now()
-    if hour is None:
-        hour = now.hour
-    if month is None:
-        month = now.month
-    if day_of_week is None:
-        day_of_week = now.weekday()
+    h = hour if hour is not None else now.hour
+    m = month if month is not None else now.month
+    dow = day_of_week if day_of_week is not None else now.weekday()
+    is_winter = 1 if m in [11, 12, 1, 2] else 0
 
-    is_winter = 1 if month in [11, 12, 1, 2] else 0
+    # 2. Map city to code
+    city_code = CITY_CODES.get(city, 0)
 
-    # Get city code
-    city_code = CITY_CODES.get(city)
-    if city_code is None:
-        logger.warning(f"Unknown city: {city}. Using code 0.")
-        city_code = 0
-
-    # Build feature row (same order as training!)
-    features = pd.DataFrame([{
-        "city_code": city_code,
-        "hour": hour,
-        "month": month,
-        "day_of_week": day_of_week,
-        "is_winter": is_winter,
-        "NO": no,
-        "NO2": no2,
-        "CO": co,
-        "SO2": so2,
-        "O3": o3,
-        "NH3": nh3,
-        "PM10": pm10,
-    }])
-    
-    features = features.astype(float)
-
-    # Load model and predict
-    model = load_model()
+    # 3. Load model (Singleton)
+    model = get_model()
     if model is None:
-        # Fallback to a zero or default prediction instead of crashing
+        return {"city": city, "predicted_pm25": 0.0, "error": "Model missing"}
+
+    # 4. Prepare Feature Matrix
+    features = pd.DataFrame([{
+        "city_code": float(city_code),
+        "hour": float(h),
+        "month": float(m),
+        "day_of_week": float(dow),
+        "is_winter": float(is_winter),
+        "NO": float(no or 0),
+        "NO2": float(no2 or 0),
+        "CO": float(co or 0),
+        "SO2": float(so2 or 0),
+        "O3": float(o3 or 0),
+        "NH3": float(nh3 or 0),
+        "PM10": float(pm10 or 0),
+    }])
+
+    # 5. Predict
+    try:
+        raw_pred = float(model.predict(features)[0])
+        clamped_pred = max(0.0, min(raw_pred, 550.0))
         return {
             "city": city,
-            "predicted_pm25": 0.0, 
-            "error": "Model not found",
-            "hour": hour,
-            "month": month
+            "predicted_pm25": round(clamped_pred, 2),
+            "hour": h,
+            "month": m,
+            "is_winter": bool(is_winter)
         }
+    except Exception as e:
+        logger.error(f"Prediction failed: {e}")
+        return {"city": city, "predicted_pm25": 0.0, "error": str(e)}
 
-    predicted_pm25 = float(model.predict(features)[0])
-
-    # Clamp to realistic range
-    predicted_pm25 = max(0, min(predicted_pm25, 500))
-
-    result = {
-        "city": city,
-        "predicted_pm25": round(predicted_pm25, 2),
-        "hour": hour,
-        "month": month,
-        "is_winter": bool(is_winter),
-    }
-
-    logger.info(f"🔮 Prediction: {city} → PM2.5 = {predicted_pm25:.2f} μg/m³")
-    return result
-
-
-# --- Test directly ---
 if __name__ == "__main__":
-    # Test with some sample inputs
-    print("Testing predictions:\n")
-
-    # Test 1: Delhi in winter morning (should be HIGH)
-    r1 = predict_pm25("Delhi", hour=8, month=1, no2=45, co=2.5, pm10=180)
-    print(f"Delhi (Winter 8AM):  PM2.5 = {r1['predicted_pm25']} μg/m³")
-
-    # Test 2: Chennai in summer afternoon (should be LOW)
-    r2 = predict_pm25("Chennai", hour=14, month=7, no2=12, co=0.5, pm10=40)
-    print(f"Chennai (Summer 2PM): PM2.5 = {r2['predicted_pm25']} μg/m³")
-
-    # Test 3: Mumbai right now (auto-detect time)
-    r3 = predict_pm25("Mumbai", no2=25, co=1.0)
-    print(f"Mumbai (Now):        PM2.5 = {r3['predicted_pm25']} μg/m³")
+    # Rapid-fire test to verify singleton behavior (log should only appear once)
+    print("Testing Singleton Predictor...")
+    for _ in range(5):
+        predict_pm25("Delhi")
+    print("Done. Check logs for redundant loads!")

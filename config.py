@@ -18,19 +18,26 @@ class Settings(BaseSettings):
     # --- Project Info ---
     PROJECT_NAME: str = "AirShield AI"
     PROJECT_VERSION: str = "0.1.0"
-    APP_ENV: str = "development"
-
-    # --- API Keys (empty default = won't crash if missing) ---
+    # --- API Keys ---
     OPENWEATHER_API_KEY: str = ""
     AQICN_API_KEY: str = ""
     GOOGLE_API_KEY: str = ""
-    OPENROUTER_API_KEY: str = ""  # <-- ADD THIS LINE
+    OPENROUTER_API_KEY: str = ""
+    TELEGRAM_BOT_TOKEN: str = ""
+
+    # --- Cloud & Webhook Settings ---
+    WEBHOOK_URL: str = ""  
+    APP_ENV: str = "development" 
+    PORT: int = 10000
+
     # --- App Settings ---
     LOG_LEVEL: str = "INFO"
 
     # --- API Retry Settings ---
     API_MAX_RETRIES: int = 3
-    API_RETRY_DELAY: float = 2.0  # base delay in seconds (exponential backoff)
+    API_RETRY_DELAY: float = 2.0 
+    CONNECT_TIMEOUT: float = 10.0
+    READ_TIMEOUT: float = 30.0
 
      # --- Database ---
     DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'data' / 'airshield.db'}"
