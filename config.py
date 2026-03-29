@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = Field(default="", description="Telegram Bot Token from @BotFather")
     OPENWEATHER_API_KEY: str = Field(default="", description="OpenWeatherMap API Key")
     OPENROUTER_API_KEY: str = Field(default="", description="OpenRouter API Key for LLM access")
+    NVIDIA_API_KEY: str = Field(default="", description="NVIDIA NIM API Key for ultra-edge inference")
+    OPENROUTER_API_KEYS: str = Field(default="", description="Comma-separated OpenRouter keys for multi-tier pooling")
     AQICN_API_KEY: str = ""
 
     # --- Cloud & Webhook Settings ---
@@ -72,6 +74,15 @@ class Settings(BaseSettings):
         if url.startswith("postgres://"):
             return url.replace("postgres://", "postgresql://", 1)
         return url
+        
+    def get_openrouter_keys(self) -> list[str]:
+        """Returns a list of all available OpenRouter API keys to support multi-key pooling."""
+        keys = []
+        if self.OPENROUTER_API_KEYS:
+            keys = [k.strip() for k in self.OPENROUTER_API_KEYS.split(",") if k.strip()]
+        if not keys and self.OPENROUTER_API_KEY:
+            keys = [self.OPENROUTER_API_KEY]
+        return keys if keys else [""]
 
 
 # --- This runs when any file imports config ---

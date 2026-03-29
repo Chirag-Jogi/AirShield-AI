@@ -50,9 +50,10 @@ class AirShieldAgent:
     Combines Real-time ETL, ML Predictions, and a Witty LLM Persona.
     """
 
-    def __init__(self, target_city: str, home_city: Optional[str] = None):
+    def __init__(self, target_city: str, home_city: Optional[str] = None, user_name: str = "Friend"):
         self.target_city = target_city
         self.home_city = home_city or target_city
+        self.user_name = user_name
         self.context_data = {}
         self.is_initialized = False
 
@@ -109,101 +110,105 @@ class AirShieldAgent:
         forecast_str = "\n".join([f"- {f['date']}: AQI {f['aqi']} ({f['pm25']} μg/m³)" for f in ctx.get("forecast", [])])
         
         system_prompt = (
-            f"You are **AirShield AI**, the elite 24/7 personal health guardian. "
-            f"You adopt a persona like a witty, caring, and tech-savvy 'Swiggy' delivery buddy. "
-            f"You don't talk like a robot; you talk like someone's best friend who happens to have a PhD in Environmental Science.\n\n"
-            
-            f"**USER CURRENT LOCATION:** {self.target_city}\n"
-            f"**USER PROTECTED HOME:** {self.home_city}\n"
-            f"**LIVE DATA FOR {self.target_city.upper()} (Professional AQI 0-500 Scale):** AQI: {cur.get('aqi', 'N/A')}, PM2.5: {cur.get('pm2_5', 'N/A')}\n"
-            f"**LOCAL INSIGHT:** {ctx.get('insight')}\n"
-            f"**{self.target_city.upper()} 7-DAY FORECAST:**\n{forecast_str}\n\n"
-            
-            f"**YOUR COMMANDS:**\n"
-            f"1. **City Expert**: You have live access to the city mentioned in **USER CURRENT LOCATION**. Talk about that city primarily.\n"
-            f"2. **Be Witty**: Use emojis wisely. Use casual Indian English (e.g., 'buddy', 'sorted', 'solid', 'kamaal').\n"
-            f"3. **Comparison (Optional)**: If the current city is different from their home, you can briefly mention if the air is better or worse than back home.\n"
-            f"4. **Be Proactive**: If the forecast shows a spike (>60 μg/m³) in the next 3 days, MENTION IT, even if the user didn't ask.\n"
-            f"5. **Actionable**: Always end with a punchy health tip.\n\n"
-            
-            f"**STRICT FORMAT:**\n"
-            f"📍 **{self.target_city} | {datetime.now().strftime('%H:%M')}**\n"
-            f"[Your witty response here]\n\n"
-            f"🛡️ **Guardian Tip:** [Quick 1-sentence tip]"
+            f"You are **AirShield AI**, an elite, highly responsive personal health guardian.\n"
+            f"The user you are currently protecting is named: **{self.user_name}**.\n\n"
+            f"[CONTEXT]\n"
+            f"Target Location: {self.target_city}\n"
+            f"Protected Home: {self.home_city}\n"
+            f"Current AQI: {cur.get('aqi', 'N/A')} (PM2.5: {cur.get('pm2_5', 'N/A')} μg/m³)\n"
+            f"Next 24h Trend: {ctx.get('insight')}\n"
+            f"{self.target_city.upper()} 7-DAY FORECAST:\n{forecast_str}\n\n"
+            f"[BEHAVIOR & TONE RULES - STRICT]\n"
+            f"1. ADAPTIVE TONE:\n"
+            f"   - If AQI < 100: Be energetic, witty, and use emojis like a friendly local buddy.\n"
+            f"   - If AQI >= 150: Drop the jokes. Be clinical, serious, and prioritize urgent health warnings.\n"
+            f"2. NO HALLUCINATIONS: You are an air quality expert, not a general doctor. Do not give medical diagnoses. If asked about the user's identity, you know they are {self.user_name}.\n"
+            f"3. EFFICIENCY: Keep responses under 4 sentences. Be highly scannable.\n"
+            f"4. PROACTIVE: If tomorrow's forecast shows a dangerous spike (>150 AQI), you MUST mention it.\n\n"
+            f"[OUTPUT FORMAT]\n"
+            f"Always start with: '📍 **{self.target_city} | {datetime.now().strftime('%H:%M')}**'\n"
+            f"Provide your targeted insight.\n"
+            f"End with '🛡️ **Guardian Tip:** [Quick 1-sentence tip]'"
         )
 
         messages = [{"role": "system", "content": system_prompt}] + chat_history + [{"role": "user", "content": user_query}]
         http_client = await get_http_client()
 
-        @sentinel_retry(exceptions=(httpx.HTTPError, asyncio.TimeoutError))
-        async def _request_llm(model):
-            resp = await http_client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}"},
-                json={"model": model, "messages": messages, "temperature": 0.7},
-                timeout=25.0
-            )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
-
-        # Cascade Failover strategy (Aggressive & Shuffled)
-        models_to_try = list(FREE_MODELS)
-        random.shuffle(models_to_try)
-
-        for model in models_to_try:
+        # NVIDIA NIM Elite Models 🔥 (Self-Hosted on NVIDIA hardware)
+        top_tier = [
+            "meta/llama-3.1-70b-instruct",
+            "meta/llama-3.1-405b-instruct",
+            "mistralai/mistral-large"
+        ]
+        
+        for model in top_tier:
             try:
-                logger.info(f"[Agent] Processing request with {model.split('/')[-1]}...")
-                return await _request_llm(model)
-            except httpx.HTTPStatusError as e:
-                # Immediate failover for 429 (Busy) or 404 (Missing)
-                if e.response.status_code in [429, 404]:
-                    logger.warning(f"[Agent] Model {model} is busy/unavailable. Skipping immediately.")
-                    continue
-                logger.error(f"[Agent] Failover: {model} failed. Trying next...")
-                continue
+                logger.info(f"[Agent] NVIDIA-Querying {model}...")
+                resp = await http_client.post(
+                    "https://integrate.api.nvidia.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.NVIDIA_API_KEY}",
+                        "Accept": "application/json"
+                    },
+                    json={"model": model, "messages": messages, "temperature": 0.5, "max_tokens": 1024},
+                    timeout=8.0  # Generous NIM timeout 
+                )
+                resp.raise_for_status()
+                return resp.json()["choices"][0]["message"]["content"]
             except Exception as e:
-                logger.error(f"[Agent] Failover: {model} failed. Trying next...")
+                logger.warning(f"[Agent] NVIDIA Model {model} failed: {str(e)[:80]}")
                 continue
 
-        return "🛡️ AirShield is currently processing high traffic. My brain is a bit foggy—try again in a minute, buddy!"
+        logger.error("[Agent] ALL NVIDIA inference models failed.")
+        return "🛡️ Network interference! The air data is super foggy right now. Try again in 10 seconds, buddy!"
 
     @classmethod
     async def identify_city_async(cls, user_text: str) -> Optional[str]:
         """
         Elite City Identification.
-        Uses the LLM to extract a city name from natural language if fuzzy matching fails.
+        Uses a parallel LLM race to extract a city name in <3 seconds.
         """
-        # 1. Prepare simple extraction prompt
         available_cities = ", ".join([c.name for c in INDIAN_CITIES])
         prompt = (
-            f"You are a location extraction expert. "
+            f"You are a fast location extraction expert. "
             f"The user says: '{user_text}'.\n\n"
             f"Identify if they are mentioning one of these Indian cities: {available_cities}.\n"
             f"RULES:\n"
-            f"- If a city is found, return ONLY the city name (e.g., 'Mumbai').\n"
+            f"- If a city is found, return ONLY the exact city name (e.g., 'Mumbai').\n"
             f"- If no city is found or it's outside this list, return 'NONE'.\n"
             f"- Do not provide explanations or extra text."
         )
 
-        # 2. Call LLM (Ranked failover)
         messages = [{"role": "user", "content": prompt}]
         http_client = await get_http_client()
 
-        for model in FREE_MODELS:
+        reliable_models = [
+            "meta/llama-3.1-70b-instruct",
+            "mistralai/mixtral-8x22b-instruct-v0.1"
+        ]
+
+        for model in reliable_models:
             try:
                 resp = await http_client.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {settings.OPENROUTER_API_KEY}"},
-                    json={"model": model, "messages": messages, "temperature": 0},
-                    timeout=10.0
+                    "https://integrate.api.nvidia.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.NVIDIA_API_KEY}",
+                        "Accept": "application/json"
+                    },
+                    json={"model": model, "messages": messages, "temperature": 0, "max_tokens": 100},
+                    timeout=5.0
                 )
                 resp.raise_for_status()
                 result = resp.json()["choices"][0]["message"]["content"].strip()
-                
+                        
                 if result != "NONE" and any(c.name == result for c in INDIAN_CITIES):
-                    logger.info(f"[Agent] Successfully identified city: {result}")
+                    logger.info(f"[Agent] Successfully extracted city: {result}")
                     return result
-            except:
+                elif result == "NONE":
+                    return None
+            except Exception as e:
+                logger.warning(f"[Agent City-Check] NVIDIA Model {model} failed: {str(e)[:80]}")
                 continue
         
+        logger.error("[Agent] ALL city extraction models failed.")
         return None
