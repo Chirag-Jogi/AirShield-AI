@@ -12,10 +12,11 @@ from src.agent.advisor import AirShieldAgent
 logger = logging.getLogger(__name__)
 
 def validate_city(city_text: str):
-    """Check if the provided text matches one of our known Indian cities."""
-    search_term = city_text.strip().lower()
+    """Check if any known Indian city name is mentioned in the user's sentence."""
+    search_text = city_text.strip().lower()
     for city in INDIAN_CITIES:
-        if city.name.lower() == search_term:
+        # Check if the city name appears as a standalone word or part of the sentence
+        if f" {city.name.lower()} " in f" {search_text} ":
             return city.name
     return None
 
@@ -111,11 +112,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             context.user_data['history'] = []
 
-    target_city = None
     # Determine intent for city mentioned
+    target_city = None
+    is_change_intent = any(k in text.lower() for k in ["change", "update", "set", "make"])
+
     for city in INDIAN_CITIES:
         if city.name.lower() in text.lower():
             target_city = city.name
+            # --- AUTO-UPDATE HOME CITY ON CLEAR INTENT ---
+            if is_change_intent:
+                update_user_city(user_id, target_city)
+                logger.info(f"🔄 Auto-updated home city for {user_id} to {target_city} based on intent.")
             break
     
     if any(k in text.lower() for k in ["my city", "home", "mine"]):
