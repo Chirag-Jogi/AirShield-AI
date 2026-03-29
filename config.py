@@ -6,13 +6,21 @@ Every module imports from here: from config import settings
 
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
 
 
 # This gives us the folder where config.py lives
 BASE_DIR = Path(__file__).resolve().parent
 
 
-     # --- Database ---
+class Settings(BaseSettings):
+    """All app settings. Loaded automatically from .env file."""
+
+    # --- Project Info ---
+    PROJECT_NAME: str = "AirShield AI"
+    PROJECT_VERSION: str = "0.1.0"
+
+    # --- Database ---
     DATABASE_URL: str = Field(
         default=f"sqlite:///{BASE_DIR / 'data' / 'airshield.db'}",
         description="SQLAlchemy-compatible database URL"
@@ -29,6 +37,14 @@ BASE_DIR = Path(__file__).resolve().parent
     APP_ENV: str = Field(default="development", pattern="^(development|staging|production)$")
     PORT: int = 10000
 
+    # --- App Settings ---
+    LOG_LEVEL: str = "INFO"
+
+    # --- API Retry Settings ---
+    API_MAX_RETRIES: int = 3
+    API_RETRY_DELAY: float = 2.0 
+    CONNECT_TIMEOUT: float = 30.0
+    READ_TIMEOUT: float = 30.0
 
     # --- Paths ---
     DATA_DIR: Path = BASE_DIR / "data"
