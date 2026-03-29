@@ -27,11 +27,11 @@ Unlike standard trackers, AirShield implements **"Steel Memory" logic**—a stat
 
 ## ⚡ Key Features
 
-* **🤖 24/7 AI Guardian (Telegram):** An interactive LLM-powered bot (NVIDIA Nemotron 30B / Llama 3) that adopts a casual, "Swiggy-style" personal buddy persona. No jargon, just witty and actionable health advice.
-* **🧠 Steel Memory Logic:** A custom state-tracking engine built on PostgreSQL that prevents notification spam and ensures resilient daily deliveries despite GitHub Action scheduling delays.
+* **🤖 24/7 AI Guardian (Telegram):** An interactive LLM-powered bot that adopts a casual, "Swiggy-style" personal buddy persona. Powered natively by **NVIDIA NIM (Llama 3.1 405B / 70B)** for sub-5-second edge inference.
+* **🧠 Persistent Persona Memory:** A contextual RAG-lite engine that injects your specific identity, location, and health constraints directly into the LLM logic on every query to prevent hallucinations.
 * **📡 Autonomous ETL Pipeline:** A serverless data harvester that wakes up every 30 minutes via **GitHub Actions** to extract, transform, and load meteorological metrics into the cloud.
+* **⚡ Resilient Fallback Engine:** Features an ultra-fast Python sequential router that seamlessly fails over between elite GPU clusters to ensure 100% cloud uptime without API deadlocks.
 * **🔮 Predictive ML Engine:** An XGBoost regressor that evaluates 24-hour weather patterns and wind speeds to forecast PM2.5 trends with an **R² score of 0.77+**.
-* **🏙️ Multi-City Persistence:** Tracks individual user preferences, home cities, and alert history for hyper-personalized health monitoring.
 
 ---
 
@@ -56,7 +56,7 @@ graph TD;
     subgraph "Intelligence Tier"
         E -->|"Features"| F[XGBoost Forecaster];
         F -->|"Predictions"| G[AI Agent Context];
-        H[OpenRouter LLM] <--> G;
+        H[NVIDIA NIM Serverless Endpoints] <--> G;
     end
 
     subgraph "Communication Tier (Render)"
@@ -72,7 +72,7 @@ graph TD;
 | **Logic/State** | Python 3.11, SQLAlchemy, Pydantic, Tenacity |
 | **Database** | PostgreSQL (Supabase Cloud) |
 | **Predictive AI** | XGBoost, Scikit-Learn, Pandas, MLflow |
-| **Generative AI** | NVIDIA Nemotron 30B, Meta Llama-3 (via OpenRouter) |
+| **Generative AI** | NVIDIA Inference Microservices (Meta Llama-3.1 405B & 70B) |
 | **Cloud/DevOps** | Render (24/7 Bot), GitHub Actions (Scraper), Docker |
 
 ---
@@ -83,7 +83,7 @@ graph TD;
 You need four free API keys to go live:
 1. **[Bot Token](https://t.me/Botfather):** From Telegram BotFather.
 2. **[OpenWeather API](https://openweathermap.org/api):** For meteorological data.
-3. **[OpenRouter API](https://openrouter.ai/):** For model access.
+3. **[NVIDIA NIM API](https://build.nvidia.com/):** For serverless GPU LLM inference.
 4. **[Supabase DB URL](https://supabase.com/):** For cloud PostgreSQL.
 
 ### 2. Standard Installation
@@ -96,6 +96,7 @@ python -m src.bot.bot
 ### 3. Environment Secrets (.env)
 ```env
 TELEGRAM_BOT_TOKEN=your_token
+NVIDIA_API_KEY=nvapi-your_key
 OPENROUTER_API_KEY=your_key
 DATABASE_URL=your_supabase_url
 OPENWEATHER_API_KEY=your_key
