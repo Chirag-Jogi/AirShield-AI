@@ -10,7 +10,7 @@ import json
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 
-from src.config import settings
+from config import settings
 from src.data.cities import INDIAN_CITIES
 from src.data.scrapers import openweather_scraper
 from src.ml.predictor import predict_pm25

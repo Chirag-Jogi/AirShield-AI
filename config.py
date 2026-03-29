@@ -12,35 +12,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).resolve().parent
 
 
-class Settings(BaseSettings):
-    """All app settings. Loaded automatically from .env file."""
+     # --- Database ---
+    DATABASE_URL: str = Field(
+        default=f"sqlite:///{BASE_DIR / 'data' / 'airshield.db'}",
+        description="SQLAlchemy-compatible database URL"
+    )
 
-    # --- Project Info ---
-    PROJECT_NAME: str = "AirShield AI"
-    PROJECT_VERSION: str = "0.1.0"
-    # --- API Keys ---
-    OPENWEATHER_API_KEY: str = ""
+    # --- API Credentials ---
+    TELEGRAM_BOT_TOKEN: str = Field(default="", description="Telegram Bot Token from @BotFather")
+    OPENWEATHER_API_KEY: str = Field(default="", description="OpenWeatherMap API Key")
+    OPENROUTER_API_KEY: str = Field(default="", description="OpenRouter API Key for LLM access")
     AQICN_API_KEY: str = ""
-    GOOGLE_API_KEY: str = ""
-    OPENROUTER_API_KEY: str = ""
-    TELEGRAM_BOT_TOKEN: str = ""
 
     # --- Cloud & Webhook Settings ---
-    WEBHOOK_URL: str = ""  
-    APP_ENV: str = "development" 
+    WEBHOOK_URL: str = Field(default="", description="Webhook URL for Render 24/7 reliability")
+    APP_ENV: str = Field(default="development", pattern="^(development|staging|production)$")
     PORT: int = 10000
-
-    # --- App Settings ---
-    LOG_LEVEL: str = "INFO"
-
-    # --- API Retry Settings ---
-    API_MAX_RETRIES: int = 3
-    API_RETRY_DELAY: float = 2.0 
-    CONNECT_TIMEOUT: float = 10.0
-    READ_TIMEOUT: float = 30.0
-
-     # --- Database ---
-    DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'data' / 'airshield.db'}"
 
 
     # --- Paths ---
@@ -61,6 +48,14 @@ class Settings(BaseSettings):
         for dir_path in [self.DATA_DIR, self.RAW_DATA_DIR,
                          self.PROCESSED_DATA_DIR, self.MODELS_DIR]:
             dir_path.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def get_database_url(self) -> str:
+        """Sanitizes the database URL for Supabase/PgBouncer compatibility."""
+        url = str(self.DATABASE_URL)
+        if url.startswith("postgres://"):
+            return url.replace("postgres://", "postgresql://", 1)
+        return url
 
 
 # --- This runs when any file imports config ---

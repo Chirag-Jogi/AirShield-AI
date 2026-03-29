@@ -9,7 +9,7 @@ import asyncio
 from typing import List, Dict, Any
 from dataclasses import dataclass, field
 
-from src.config import settings
+from config import settings
 from src.data.scrapers import openweather_scraper, aqicn_scraper
 from src.data.cleaner import clean_and_resolve
 from src.database import queries

@@ -10,7 +10,7 @@ import pytz
 from telegram import Bot
 from telegram.constants import ParseMode
 
-from src.config import settings
+from config import settings
 from src.database.connection import AsyncSessionLocal
 from src.database import queries
 from src.agent.advisor import AirShieldAgent
