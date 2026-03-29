@@ -1,3 +1,5 @@
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 import os
 import asyncio
@@ -12,6 +14,18 @@ from src.data.cities import INDIAN_CITIES
 from src.database.queries import get_or_create_user, update_user_city
 from src.agent.advisor import AirShieldAgent
 from src.utils.http_client import SentinelClient
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    """Minimal server to satisfy Render's port check."""
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"AirShield AI is alive!")
+
+def run_health_check():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.serve_forever()
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 load_dotenv()
@@ -110,6 +124,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f"✅ Perfect! I'm now protecting you in **{new_city}**! 🛡️")
 
 if __name__ == '__main__':
+    # Start the health check server in a background thread for Render
+    threading.Thread(target=run_health_check, daemon=True).start()
+    
     request = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
     application = ApplicationBuilder().token(TOKEN).request(request).post_shutdown(post_shutdown).build()
     
@@ -117,5 +134,5 @@ if __name__ == '__main__':
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(button_handler))
     
-    print("🚀 Friendly AI Guardian is live (Resilient & Async)...")
+    print("🚀 Friendly AI Guardian is live (Resilient, Async, 24/7 Cloud Support)...")
     application.run_polling()
