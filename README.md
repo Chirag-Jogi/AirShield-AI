@@ -8,6 +8,10 @@
   [![PostgreSQL](https://img.shields.io/badge/DB-Supabase_PostgreSQL-336791?logo=postgresql&logoColor=white)](https://supabase.com)
   [![Hosting](https://img.shields.io/badge/Cloud-Render-46E3B7?logo=render&logoColor=white)](https://render.com)
   [![Automation](https://img.shields.io/badge/Automation-GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
+  
+  <br/>
+  
+  ### 🛡️ [Interact with the Guardian Bot: @AirShield_Bot](https://t.me/AirShield_Bot)
 </div>
 
 ---
