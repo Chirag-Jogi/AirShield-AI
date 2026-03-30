@@ -20,7 +20,7 @@ from src.utils.http_client import SentinelClient
 async def generate_elite_notification(user, current_aqi: int, message_type: str = "morning") -> str:
     """Uses the refined AirShieldAgent to generate a persona-driven push notification."""
     city_name = user.home_city or "your area"
-    agent = AirShieldAgent(city_name, home_city=city_name)
+    agent = AirShieldAgent(city_name, home_city=city_name, user_name=user.first_name)
     
     # We pass a specific system-override prompt for the notification type
     if message_type == "morning":
@@ -91,15 +91,9 @@ async def run_proactive_guardian():
             # --- LOGIC B: HAZARDOUS SPIKE ALERT (AQI > 150) ---
             # Frequency limited to once every 4 hours to prevent spam.
             is_hazardous = status.aqi > 150
-            recently_alerted = False
-            if user.last_alert_at:
-                time_delta = datetime.now(timezone.utc) - user.last_alert_at.replace(tzinfo=timezone.utc)
-                recently_alerted = time_delta < (datetime.now() - (datetime.now() - (asyncio.Future().set_result(None) or  asyncio.Future().set_result(None) or asyncio.timedelta(hours=4))))
-                # Fixed delta logic below
-                time_since_alert = datetime.now(timezone.utc) - user.last_alert_at.replace(tzinfo=timezone.utc)
-                recently_alerted = time_since_alert < asyncio.to_thread(lambda: None) or timedelta(hours=4)
-
-            # Let's use a cleaner time delta calculation
+            
+            # Clean time delta calculation
+            from datetime import timedelta
             now_utc = datetime.now(timezone.utc)
             last_alert = user.last_alert_at.replace(tzinfo=timezone.utc) if user.last_alert_at else None
             recently_alerted = (last_alert and (now_utc - last_alert) < timedelta(hours=4))
