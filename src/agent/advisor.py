@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional
 
 from config import settings
 from src.data.cities import INDIAN_CITIES
-from src.data.scrapers import openweather_scraper
+from src.data.scrapers import aqicn_scraper
 from src.ml.predictor import predict_pm25
 from src.utils.logger import logger
 from src.utils.time_utils import get_ist_now
@@ -65,9 +65,9 @@ class AirShieldAgent:
             self.context_data = {"error": "Unknown city"}
             return
 
-        # 1. LIVE DATA FETCH (Async)
-        live = await openweather_scraper.fetch_air_quality(
-            settings.OPENWEATHER_API_KEY, city.name, city.latitude, city.longitude
+        # 1. LIVE DATA FETCH (Async) — Switching to AQICN for production-grade accuracy
+        live = await aqicn_scraper.fetch_air_quality(
+            settings.AQICN_API_KEY, city.name, city.aqicn_slug
         )
         
         # 2. ML FORECAST (Next 7 Days) — Calibrated to 0-500 scale
@@ -109,9 +109,14 @@ class AirShieldAgent:
         cur = ctx.get("current", {})
         forecast_str = "\n".join([f"- {f['date']}: AQI {f['aqi']} ({f['pm25']} μg/m³)" for f in ctx.get("forecast", [])])
         
+        now_ist = get_ist_now()
+        day_name = now_ist.strftime("%A")
+        date_str = now_ist.strftime("%b %d, %Y")
+
         system_prompt = (
             f"You are **AirShield AI**, an elite, highly responsive personal health guardian.\n"
-            f"The user you are currently protecting is named: **{self.user_name}**.\n\n"
+            f"The user you are currently protecting is named: **{self.user_name}**.\n"
+            f"TODAY IS: **{day_name}, {date_str}**.\n\n"
             f"[CONTEXT]\n"
             f"Target Location: {self.target_city}\n"
             f"Protected Home: {self.home_city}\n"
@@ -122,11 +127,11 @@ class AirShieldAgent:
             f"1. ADAPTIVE TONE:\n"
             f"   - If AQI < 100: Be energetic, witty, and use emojis like a friendly local buddy.\n"
             f"   - If AQI >= 150: Drop the jokes. Be clinical, serious, and prioritize urgent health warnings.\n"
-            f"2. NO HALLUCINATIONS: You are an air quality expert, not a general doctor. Do not give medical diagnoses. If asked about the user's identity, you know they are {self.user_name}.\n"
+            f"2. NO HALLUCINATIONS: You are an air quality expert, not a general doctor. Do not give medical diagnoses. If asked about the user's identity, you know they are {self.user_name}. ALWAYS respect the current day ({day_name}) when discussing forecasts.\n"
             f"3. EFFICIENCY: Keep responses under 4 sentences. Be highly scannable.\n"
             f"4. PROACTIVE: If tomorrow's forecast shows a dangerous spike (>150 AQI), you MUST mention it.\n\n"
             f"[OUTPUT FORMAT]\n"
-            f"Always start with: '📍 **{self.target_city} | {datetime.now().strftime('%H:%M')}**'\n"
+            f"Always start with: '📍 **{self.target_city} | {now_ist.strftime('%H:%M')}**'\n"
             f"Provide your targeted insight.\n"
             f"End with '🛡️ **Guardian Tip:** [Quick 1-sentence tip]'"
         )

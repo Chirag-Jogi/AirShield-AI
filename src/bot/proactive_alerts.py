@@ -82,6 +82,8 @@ async def run_proactive_guardian():
             if is_morning_window and not already_briefed:
                 logger.info(f"☀️ Pushing morning briefing to {user.first_name} ({user.home_city})")
                 try:
+                    # The generate_elite_notification call will now benefit from 
+                    # the updated AirShieldAgent which has Day/Date awareness!
                     msg = await generate_elite_notification(user, status.aqi, "morning")
                     await bot.send_message(chat_id=user.telegram_id, text=msg, parse_mode=ParseMode.MARKDOWN)
                     await queries.update_user_last_morning(session, user.telegram_id)
