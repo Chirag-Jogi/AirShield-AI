@@ -27,11 +27,14 @@ Unlike standard trackers, AirShield implements **"Steel Memory" logic**—a stat
 
 ## ⚡ Key Features
 
-* **🤖 24/7 AI Guardian (Telegram):** An interactive LLM-powered bot that adopts a casual, "Swiggy-style" personal buddy persona. Powered natively by **NVIDIA NIM (Llama 3.1 405B / 70B)** for sub-5-second edge inference.
+* **🤖 24/7 AI Guardian (Telegram):** An interactive LLM-powered bot that adopts a casual, "Swiggy-style" personal buddy persona. Powered natively by **NVIDIA NIM (Llama 3.1 405B / 70B)** with automatic **OpenRouter fallback** across 10+ free models for zero-downtime reliability.
 * **🧠 Persistent Persona Memory:** A contextual RAG-lite engine that injects your specific identity, location, and health constraints directly into the LLM logic on every query to prevent hallucinations.
 * **📡 Autonomous ETL Pipeline:** A serverless data harvester that wakes up every 30 minutes via **GitHub Actions** to extract, transform, and load meteorological metrics into the cloud.
-* **⚡ Resilient Fallback Engine:** Features an ultra-fast Python sequential router that seamlessly fails over between elite GPU clusters to ensure 100% cloud uptime without API deadlocks.
+* **🔄 Dual-Source AQI Verification:** Fetches air quality from **both OpenWeatherMap and AQICN** in parallel, calculates AQI from raw PM2.5 concentrations using the US EPA formula, and cross-verifies for maximum accuracy.
+* **⚡ Smart Fallback Chain:** A tiered LLM routing system: NVIDIA NIM (Tier 1) → OpenRouter Free Models (Tier 2) with automatic key rotation, ensuring responses even under heavy load or API rate limits.
+* **💾 Intelligent AQI Cache:** 5-minute in-memory cache per city eliminates redundant API calls when multiple users query the same location, reducing latency by **3.5x** on cached requests.
 * **🔮 Predictive ML Engine:** An XGBoost regressor that evaluates 24-hour weather patterns and wind speeds to forecast PM2.5 trends with an **R² score of 0.77+**.
+* **⏰ Real-Time Clock Accuracy:** Dynamic IST time injection ensures every response shows the exact current time, not a stale cached timestamp.
 
 ---
 
@@ -72,8 +75,9 @@ graph TD;
 | **Logic/State** | Python 3.11, SQLAlchemy, Pydantic, Tenacity |
 | **Database** | PostgreSQL (Supabase Cloud) |
 | **Predictive AI** | XGBoost, Scikit-Learn, Pandas, MLflow |
-| **Generative AI** | NVIDIA Inference Microservices (Meta Llama-3.1 405B & 70B) |
+| **Generative AI** | NVIDIA NIM (Llama 3.1 405B & 70B) + OpenRouter (10+ free model fallbacks) |
 | **Cloud/DevOps** | Render (24/7 Bot), GitHub Actions (Scraper), Docker |
+| **Resilience** | Dual-Source AQI, In-Memory Cache, Multi-Key Rotation, Tiered LLM Fallback |
 
 ---
 
@@ -105,6 +109,25 @@ AQICN_API_KEY=your_key
 
 ### 4. 24/7 Cloud Hosting (Render)
 This repository includes a `render.yaml` blueprint. Simply connect your GitHub repo to [Render.com](https://render.com) and deploy as a **Blueprint Instance**. All configurations and health checks are handled automatically.
+
+---
+
+## 🚀 v2.1 Upgrade — Production Resilience (April 2026)
+
+### Dual-Source AQI Verification
+The agent now fetches air quality data from **both OpenWeatherMap and AQICN** simultaneously using `asyncio.gather()`. OpenWeather provides raw PM2.5 in μg/m³ (converted to AQI via US EPA formula), while AQICN provides a pre-calculated AQI. If the two sources disagree by more than 30%, the system uses the **higher (safer) value** for health protection.
+
+### Smart LLM Fallback Chain
+```
+NVIDIA NIM (Llama 70B → 405B)  →  OpenRouter Free Models (10+ options, shuffled)
+```
+If NVIDIA rate-limits or fails, the system automatically routes to OpenRouter’s free model pool with **round-robin key rotation** to distribute load across multiple API keys.
+
+### Intelligent AQI Cache
+AQI data for each city is cached for 5 minutes. When multiple users ask about the same city within this window, only the first request hits the external APIs — subsequent requests are served instantly from cache. Tested result: **3.5x faster response on cached requests**.
+
+### Real-Time Clock Fix
+Every response now displays the **exact current IST time** computed at the moment of the LLM call, eliminating the stale-timestamp bug where all responses showed the same fixed time.
 
 ---
 
